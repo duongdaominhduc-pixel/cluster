@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Báo Cáo Phân Cụm Khách Hàng (Customer Segmentation Dashboard)</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-body: #0F172A;
+            --bg-card: #1E293B;
+            --bg-card-hover: #26334A;
+            --border-color: #334155;
+            --text-main: #F8FAFC;
+            --text-muted: #94A3B8;
+            --primary: #3B82F6;
+            --accent: #8B5CF6;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            padding: 30px 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .tag {
+            display: inline-block;
+            background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 12px;
+        }
+        h1 {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+            background: linear-gradient(to right, #FFFFFF, #CBD5E1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 15px;
+        }
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 35px;
+        }
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            border-color: #475569;
+        }
+        .kpi-title {
+            font-size: 13px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .kpi-value {
+            font-size: 26px;
+            font-weight: 700;
+            color: #FFFFFF;
+        }
+        /* Overview Section */
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-title::before {
+            content: "";
+            display: inline-block;
+            width: 4px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+        .overview-grid {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+        @media (max-width: 1024px) {
+            .overview-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.25);
+        }
+        .pie-container {
+            position: relative;
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .cluster-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+        .cluster-summary-card {
+            background: #182234;
+            border-left: 4px solid var(--primary);
+            border-radius: 12px;
+            padding: 16px;
+            transition: all 0.2s ease;
+        }
+        .cluster-summary-card:hover {
+            background: var(--bg-card-hover);
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #FFFFFF;
+            margin-bottom: 10px;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            padding: 4px 0;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+        }
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+        .stat-label {
+            color: var(--text-muted);
+        }
+        .stat-val {
+            font-weight: 600;
+            color: #FFFFFF;
+        }
+        /* Per Cluster Charts */
+        .clusters-section {
+            margin-bottom: 40px;
+        }
+        .cluster-detail-block {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .cluster-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .cluster-title-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .cluster-metrics-inline {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .cluster-metrics-inline span strong {
+            color: #FFFFFF;
+        }
+        .dual-chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 860px) {
+            .dual-chart-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .chart-box {
+            background: #141D2D;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 18px;
+        }
+        .chart-box h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #E2E8F0;
+        }
+        .chart-wrapper {
+            position: relative;
+            height: 250px;
+        }
+        /* Customer Table Section */
+        .table-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+        }
+        .table-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+        .filter-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .filter-btn {
+            background: #141D2D;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover, .filter-btn.active {
+            background: var(--primary);
+            color: #FFFFFF;
+            border-color: var(--primary);
+        }
+        .search-box {
+            padding: 8px 14px;
+            background: #141D2D;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: #FFFFFF;
+            font-size: 13px;
+            width: 260px;
+            outline: none;
+        }
+        .search-box:focus {
+            border-color: var(--primary);
+        }
+        .table-responsive {
+            overflow-x: auto;
+            max-height: 520px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+        }
+        thead th {
+            background: #141D2D;
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 12px 14px;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            border-bottom: 1px solid var(--border-color);
+        }
+        tbody tr {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.15s;
+        }
+        tbody tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        tbody td {
+            padding: 10px 14px;
+        }
+        .tag-age {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .tag-youth { background: rgba(59, 130, 246, 0.2); color: #60A5FA; }
+        .tag-middle { background: rgba(245, 158, 11, 0.2); color: #FBBF24; }
+        .tag-senior { background: rgba(239, 68, 68, 0.2); color: #F87171; }
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <span class="tag">Machine Learning • K-Means Segmentation</span>
+            <h1>Báo Cáo Phân Cụm Khách Hàng</h1>
+            <p class="subtitle">Phân tích đa chiều theo Độ tuổi, Thu nhập & Điểm chi tiêu (SalesDatabase Project)</p>
+        </header>
+
+        <!-- KPI Summary Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-title">Tổng số khách hàng</div>
+                <div class="kpi-value">200</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Số cụm tối ưu (K)</div>
+                <div class="kpi-value">4 Cụm</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Độ tuổi trung bình</div>
+                <div class="kpi-value">38.9 <span style="font-size: 14px; font-weight: normal; color: var(--text-muted);">tuổi</span></div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Thu nhập trung bình</div>
+                <div class="kpi-value">$60.6k</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Điểm chi tiêu trung bình</div>
+                <div class="kpi-value">50.2 <span style="font-size: 14px; font-weight: normal; color: var(--text-muted);">/100</span></div>
+            </div>
+        </div>
+
+        <!-- Section 1: Overview Chart & Cluster Cards -->
+        <div class="section-title">1. Phân bổ Tỷ lệ Khách hàng theo Cụm</div>
+        <div class="overview-grid">
+            <div class="card">
+                <h3 style="font-size: 15px; margin-bottom: 16px;">Tỷ trọng khách hàng từng cụm</h3>
+                <div class="pie-container">
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h3 style="font-size: 15px; margin-bottom: 16px;">Hồ sơ tổng quan các cụm</h3>
+                <div class="cluster-cards-grid" id="clusterSummaryCards">
+                    <!-- Cards will be populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Detailed Cluster Analysis (Age vs Income & Age vs Score) -->
+        <div class="section-title">2. Phân tích chi tiết từng Cụm: Độ tuổi với Thu nhập & Điểm chi tiêu</div>
+        <div class="clusters-section" id="clustersDetailContainer">
+            <!-- Cluster blocks with dual charts will be populated by JS -->
+        </div>
+
+        <!-- Section 3: Data Table -->
+        <div class="section-title">3. Danh sách Dữ liệu Khách hàng theo Cụm</div>
+        <div class="table-section">
+            <div class="table-controls">
+                <div class="filter-buttons" id="filterBtnGroup">
+                    <button class="filter-btn active" onclick="filterCluster('all')">Tất cả (200)</button>
+                    <!-- Buttons per cluster will be added by JS -->
+                </div>
+                <input type="text" id="searchInput" class="search-box" placeholder="🔍 Tìm theo Tên, Mã KH..." oninput="handleSearch()">
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Mã KH</th>
+                            <th>Họ và Tên</th>
+                            <th>Giới tính</th>
+                            <th>Tuổi</th>
+                            <th>Phân loại nhóm tuổi</th>
+                            <th>Thu nhập ($k)</th>
+                            <th>Điểm chi tiêu (1-100)</th>
+                            <th>Cụm (Cluster)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customerTableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 10px; font-size: 12px; color: var(--text-muted);" id="tableCountText">
+                Đang hiển thị 200 khách hàng
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <p>© 2026 UEL Machine Learning Project — SalesDatabase Customer Segmentation Report</p>
+        </footer>
+    </div>
+
+    <!-- JavaScript Data & Logic -->
+    <script>
+        const clustersData = [{"cluster": 0, "name": "Cụm 0", "color": "#EF4444", "color_light": "rgba(239, 68, 68, 0.15)", "color_border": "#DC2626", "count": 48, "percentage": 24.0, "avg_age": 55.7, "avg_income": 54.8, "avg_score": 48.2, "age_stats": [{"group": "Thanh niên (≤35)", "count": 0, "avg_income": 0, "avg_score": 0}, {"group": "Trung niên (36-45)", "count": 3, "avg_income": 57.7, "avg_score": 46.0}, {"group": "Người cao tuổi (>45)", "count": 45, "avg_income": 54.6, "avg_score": 48.4}]}, {"cluster": 1, "name": "Cụm 1", "color": "#10B981", "color_light": "rgba(16, 185, 129, 0.15)", "color_border": "#059669", "count": 57, "percentage": 28.5, "avg_age": 30.2, "avg_income": 66.1, "avg_score": 82.4, "age_stats": [{"group": "Thanh niên (≤35)", "count": 47, "avg_income": 62.6, "avg_score": 81.9}, {"group": "Trung niên (36-45)", "count": 10, "avg_income": 82.6, "avg_score": 84.3}, {"group": "Người cao tuổi (>45)", "count": 0, "avg_income": 0, "avg_score": 0}]}, {"cluster": 2, "name": "Cụm 2", "color": "#3B82F6", "color_light": "rgba(59, 130, 246, 0.15)", "color_border": "#2563EB", "count": 48, "percentage": 24.0, "avg_age": 43.3, "avg_income": 66.9, "avg_score": 15.0, "age_stats": [{"group": "Thanh niên (≤35)", "count": 11, "avg_income": 77.1, "avg_score": 10.5}, {"group": "Trung niên (36-45)", "count": 16, "avg_income": 70.5, "avg_score": 19.4}, {"group": "Người cao tuổi (>45)", "count": 21, "avg_income": 58.9, "avg_score": 14.0}]}, {"cluster": 3, "name": "Cụm 3", "color": "#8B5CF6", "color_light": "rgba(139, 92, 246, 0.15)", "color_border": "#7C3AED", "count": 47, "percentage": 23.5, "avg_age": 27.6, "avg_income": 53.3, "avg_score": 49.1, "age_stats": [{"group": "Thanh niên (≤35)", "count": 40, "avg_income": 50.9, "avg_score": 49.7}, {"group": "Trung niên (36-45)", "count": 7, "avg_income": 66.7, "avg_score": 46.0}, {"group": "Người cao tuổi (>45)", "count": 0, "avg_income": 0, "avg_score": 0}]}];
+        const pieData = {"labels": ["Cụm 0", "Cụm 1", "Cụm 2", "Cụm 3"], "counts": [48, 57, 48, 47], "colors": ["#EF4444", "#10B981", "#3B82F6", "#8B5CF6"]};
+        const customersData = [{"id": 1, "name": "lee Mean", "gender": "Male", "age": 19, "age_group": "Thanh niên (≤35)", "income": 15.0, "score": 39.0, "cluster": 3}, {"id": 2, "name": "pinknguyen", "gender": "Male", "age": 21, "age_group": "Thanh niên (≤35)", "income": 15.0, "score": 81.0, "cluster": 1}, {"id": 3, "name": "Lê Đảm", "gender": "Female", "age": 20, "age_group": "Thanh niên (≤35)", "income": 16.0, "score": 6.0, "cluster": 2}, {"id": 4, "name": "Nguyễn Văn Toàn", "gender": "Female", "age": 23, "age_group": "Thanh niên (≤35)", "income": 16.0, "score": 77.0, "cluster": 1}, {"id": 5, "name": "Trốc Gúi", "gender": "Female", "age": 31, "age_group": "Thanh niên (≤35)", "income": 17.0, "score": 40.0, "cluster": 3}, {"id": 6, "name": "Kaio Nguyễn Hoàng", "gender": "Female", "age": 22, "age_group": "Thanh niên (≤35)", "income": 17.0, "score": 76.0, "cluster": 1}, {"id": 7, "name": "quynhtp.cd", "gender": "Female", "age": 35, "age_group": "Thanh niên (≤35)", "income": 18.0, "score": 6.0, "cluster": 2}, {"id": 8, "name": "jutjit", "gender": "Female", "age": 23, "age_group": "Thanh niên (≤35)", "income": 18.0, "score": 94.0, "cluster": 1}, {"id": 9, "name": "dinh dang", "gender": "Male", "age": 64, "age_group": "Người cao tuổi (>45)", "income": 19.0, "score": 3.0, "cluster": 2}, {"id": 10, "name": "phuc05vietnam", "gender": "Female", "age": 30, "age_group": "Thanh niên (≤35)", "income": 19.0, "score": 72.0, "cluster": 1}, {"id": 11, "name": "vuongtai", "gender": "Male", "age": 67, "age_group": "Người cao tuổi (>45)", "income": 19.0, "score": 14.0, "cluster": 2}, {"id": 12, "name": "datlee3010199", "gender": "Female", "age": 35, "age_group": "Thanh niên (≤35)", "income": 19.0, "score": 99.0, "cluster": 1}, {"id": 13, "name": "hiepmts", "gender": "Female", "age": 58, "age_group": "Người cao tuổi (>45)", "income": 20.0, "score": 15.0, "cluster": 2}, {"id": 14, "name": "Quang Đạo Đồng", "gender": "Female", "age": 24, "age_group": "Thanh niên (≤35)", "income": 20.0, "score": 77.0, "cluster": 1}, {"id": 15, "name": "PHẠM QUỐC TUẤN", "gender": "Male", "age": 37, "age_group": "Trung niên (36-45)", "income": 20.0, "score": 13.0, "cluster": 2}, {"id": 16, "name": "Thành Luân Trần", "gender": "Male", "age": 22, "age_group": "Thanh niên (≤35)", "income": 20.0, "score": 79.0, "cluster": 1}, {"id": 17, "name": "Võ Nguyễn Thanh Loan", "gender": "Female", "age": 35, "age_group": "Thanh niên (≤35)", "income": 21.0, "score": 35.0, "cluster": 3}, {"id": 18, "name": "Kim Trang Tran Thi", "gender": "Male", "age": 20, "age_group": "Thanh niên (≤35)", "income": 21.0, "score": 66.0, "cluster": 3}, {"id": 19, "name": "Tuyết mùa hạ", "gender": "Male", "age": 52, "age_group": "Người cao tuổi (>45)", "income": 23.0, "score": 29.0, "cluster": 2}, {"id": 20, "name": "phamthithuhuong402", "gender": "Female", "age": 35, "age_group": "Thanh niên (≤35)", "income": 23.0, "score": 98.0, "cluster": 1}, {"id": 21, "name": "Nguyễn Vạn Toàn", "gender": "Male", "age": 35, "age_group": "Thanh niên (≤35)", "income": 24.0, "score": 35.0, "cluster": 3}, {"id": 22, "name": "Hồ Đồ", "gender": "Male", "age": 25, "age_group": "Thanh niên (≤35)", "income": 24.0, "score": 73.0, "cluster": 1}, {"id": 23, "name": "Bich tiên", "gender": "Female", "age": 46, "age_group": "Người cao tuổi (>45)", "income": 25.0, "score": 5.0, "cluster": 2}, {"id": 24, "name": "Hoat Tran", "gender": "Male", "age": 31, "age_group": "Thanh niên (≤35)", "income": 25.0, "score": 73.0, "cluster": 1}, {"id": 25, "name": "Đinh Đằng", "gender": "Female", "age": 54, "age_group": "Người cao tuổi (>45)", "income": 28.0, "score": 14.0, "cluster": 2}, {"id": 26, "name": "tanghongmong", "gender": "Male", "age": 29, "age_group": "Thanh niên (≤35)", "income": 28.0, "score": 82.0, "cluster": 1}, {"id": 27, "name": "pha lê tiu", "gender": "Female", "age": 45, "age_group": "Trung niên (36-45)", "income": 28.0, "score": 32.0, "cluster": 2}, {"id": 28, "name": "Teo tèo", "gender": "Male", "age": 35, "age_group": "Thanh niên (≤35)", "income": 28.0, "score": 61.0, "cluster": 3}, {"id": 29, "name": "Đinh Đáng", "gender": "Female", "age": 40, "age_group": "Trung niên (36-45)", "income": 29.0, "score": 31.0, "cluster": 2}, {"id": 30, "name": "btuankhanh", "gender": "Female", "age": 23, "age_group": "Thanh niên (≤35)", "income": 29.0, "score": 87.0, "cluster": 1}, {"id": 31, "name": "Ty ty", "gender": "Male", "age": 60, "age_group": "Người cao tuổi (>45)", "income": 30.0, "score": 4.0, "cluster": 2}, {"id": 32, "name": "nhattaidnp", "gender": "Female", "age": 21, "age_group": "Thanh niên (≤35)", "income": 30.0, "score": 73.0, "cluster": 1}, {"id": 33, "name": "meodethuongqn", "gender": "Male", "age": 53, "age_group": "Người cao tuổi (>45)", "income": 33.0, "score": 4.0, "cluster": 2}, {"id": 34, "name": "Phanbonhuuhai", "gender": "Male", "age": 18, "age_group": "Thanh niên (≤35)", "income": 33.0, "score": 92.0, "cluster": 1}, {"id": 35, "name": "Huynh_lg", "gender": "Female", "age": 49, "age_group": "Người cao tuổi (>45)", "income": 33.0, "score": 14.0, "cluster": 2}, {"id": 36, "name": "ly son", "gender": "Female", "age": 21, "age_group": "Thanh niên (≤35)", "income": 33.0, "score": 81.0, "cluster": 1}, {"id": 37, "name": "xuka_jp", "gender": "Female", "age": 42, "age_group": "Trung niên (36-45)", "income": 34.0, "score": 17.0, "cluster": 2}, {"id": 38, "name": "thinhpdfit", "gender": "Female", "age": 30, "age_group": "Thanh niên (≤35)", "income": 34.0, "score": 73.0, "cluster": 1}, {"id": 39, "name": "Đinh Đang", "gender": "Female", "age": 36, "age_group": "Trung niên (36-45)", "income": 37.0, "score": 26.0, "cluster": 2}, {"id": 40, "name": "Nguyen Van Toan", "gender": "Female", "age": 20, "age_group": "Thanh niên (≤35)", "income": 37.0, "score": 75.0, "cluster": 1}, {"id": 41, "name": "Nguyễn văn toản", "gender": "Female", "age": 65, "age_group": "Người cao tuổi (>45)", "income": 38.0, "score": 35.0, "cluster": 0}, {"id": 42, "name": "Tép Rô", "gender": "Male", "age": 24, "age_group": "Thanh niên (≤35)", "income": 38.0, "score": 92.0, "cluster": 1}, {"id": 43, "name": "congluan99", "gender": "Male", "age": 48, "age_group": "Người cao tuổi (>45)", "income": 39.0, "score": 36.0, "cluster": 0}, {"id": 44, "name": "Nakamichivn", "gender": "Female", "age": 31, "age_group": "Thanh niên (≤35)", "income": 39.0, "score": 61.0, "cluster": 3}, {"id": 45, "name": "dinhtd", "gender": "Female", "age": 49, "age_group": "Người cao tuổi (>45)", "income": 39.0, "score": 28.0, "cluster": 2}, {"id": 46, "name": "Lê Tấn Thắng", "gender": "Female", "age": 24, "age_group": "Thanh niên (≤35)", "income": 39.0, "score": 65.0, "cluster": 3}, {"id": 47, "name": "Nhã Kỳ", "gender": "Female", "age": 50, "age_group": "Người cao tuổi (>45)", "income": 40.0, "score": 55.0, "cluster": 0}, {"id": 48, "name": "phu69sg", "gender": "Female", "age": 27, "age_group": "Thanh niên (≤35)", "income": 40.0, "score": 47.0, "cluster": 3}, {"id": 49, "name": "Kiên Đào Trung", "gender": "Female", "age": 29, "age_group": "Thanh niên (≤35)", "income": 40.0, "score": 42.0, "cluster": 3}, {"id": 50, "name": "hieuduong84", "gender": "Female", "age": 31, "age_group": "Thanh niên (≤35)", "income": 40.0, "score": 42.0, "cluster": 3}, {"id": 51, "name": "hoang05081990", "gender": "Female", "age": 49, "age_group": "Người cao tuổi (>45)", "income": 42.0, "score": 52.0, "cluster": 0}, {"id": 52, "name": "Ice Tea", "gender": "Male", "age": 33, "age_group": "Thanh niên (≤35)", "income": 42.0, "score": 60.0, "cluster": 3}, {"id": 53, "name": "kingofmine_88", "gender": "Female", "age": 31, "age_group": "Thanh niên (≤35)", "income": 43.0, "score": 54.0, "cluster": 3}, {"id": 54, "name": "maibach66", "gender": "Male", "age": 59, "age_group": "Người cao tuổi (>45)", "income": 43.0, "score": 60.0, "cluster": 0}, {"id": 55, "name": "triệu quang vũ", "gender": "Female", "age": 50, "age_group": "Người cao tuổi (>45)", "income": 43.0, "score": 45.0, "cluster": 0}, {"id": 56, "name": "ân lê hồng", "gender": "Male", "age": 47, "age_group": "Người cao tuổi (>45)", "income": 43.0, "score": 41.0, "cluster": 0}, {"id": 57, "name": "Nguyễn Trai", "gender": "Female", "age": 51, "age_group": "Người cao tuổi (>45)", "income": 44.0, "score": 50.0, "cluster": 0}, {"id": 58, "name": "Trai Làng", "gender": "Male", "age": 69, "age_group": "Người cao tuổi (>45)", "income": 44.0, "score": 46.0, "cluster": 0}, {"id": 59, "name": "vau1vau2", "gender": "Female", "age": 27, "age_group": "Thanh niên (≤35)", "income": 46.0, "score": 51.0, "cluster": 3}, {"id": 60, "name": "Ngọc Viettel Cáp Quang 0981116444", "gender": "Male", "age": 53, "age_group": "Người cao tuổi (>45)", "income": 46.0, "score": 46.0, "cluster": 0}, {"id": 61, "name": "Giang Lee", "gender": "Male", "age": 70, "age_group": "Người cao tuổi (>45)", "income": 46.0, "score": 56.0, "cluster": 0}, {"id": 62, "name": "khanhnc.nps", "gender": "Male", "age": 19, "age_group": "Thanh niên (≤35)", "income": 46.0, "score": 55.0, "cluster": 3}, {"id": 63, "name": "hovy1995.nghean", "gender": "Female", "age": 67, "age_group": "Người cao tuổi (>45)", "income": 47.0, "score": 52.0, "cluster": 0}, {"id": 64, "name": "pe_tocngan91", "gender": "Female", "age": 54, "age_group": "Người cao tuổi (>45)", "income": 47.0, "score": 59.0, "cluster": 0}, {"id": 65, "name": "Nha Ky", "gender": "Male", "age": 63, "age_group": "Người cao tuổi (>45)", "income": 48.0, "score": 51.0, "cluster": 0}, {"id": 66, "name": "Trà Giang Nguyễn", "gender": "Male", "age": 18, "age_group": "Thanh niên (≤35)", "income": 48.0, "score": 59.0, "cluster": 3}, {"id": 67, "name": "daohaidang07", "gender": "Female", "age": 43, "age_group": "Trung niên (36-45)", "income": 48.0, "score": 50.0, "cluster": 0}, {"id": 68, "name": "Linh Phuong", "gender": "Female", "age": 68, "age_group": "Người cao tuổi (>45)", "income": 48.0, "score": 48.0, "cluster": 0}, {"id": 69, "name": "cafelamson", "gender": "Male", "age": 19, "age_group": "Thanh niên (≤35)", "income": 48.0, "score": 59.0, "cluster": 3}, {"id": 70, "name": "Hậu ACE", "gender": "Female", "age": 32, "age_group": "Thanh niên (≤35)", "income": 48.0, "score": 47.0, "cluster": 3}, {"id": 71, "name": "gold170990", "gender": "Male", "age": 70, "age_group": "Người cao tuổi (>45)", "income": 49.0, "score": 55.0, "cluster": 0}, {"id": 72, "name": "Ductho103", "gender": "Female", "age": 47, "age_group": "Người cao tuổi (>45)", "income": 49.0, "score": 42.0, "cluster": 0}, {"id": 73, "name": "Hung Ton", "gender": "Female", "age": 60, "age_group": "Người cao tuổi (>45)", "income": 50.0, "score": 49.0, "cluster": 0}, {"id": 74, "name": "trannhiqt66", "gender": "Female", "age": 60, "age_group": "Người cao tuổi (>45)", "income": 50.0, "score": 56.0, "cluster": 0}, {"id": 75, "name": "Hong Kdoh", "gender": "Male", "age": 59, "age_group": "Người cao tuổi (>45)", "income": 54.0, "score": 47.0, "cluster": 0}, {"id": 76, "name": "caonhung", "gender": "Male", "age": 26, "age_group": "Thanh niên (≤35)", "income": 54.0, "score": 54.0, "cluster": 3}, {"id": 77, "name": "phuotngao", "gender": "Female", "age": 45, "age_group": "Trung niên (36-45)", "income": 54.0, "score": 53.0, "cluster": 0}, {"id": 78, "name": "toanbeo", "gender": "Male", "age": 40, "age_group": "Trung niên (36-45)", "income": 54.0, "score": 48.0, "cluster": 3}, {"id": 79, "name": "hnt1969", "gender": "Female", "age": 23, "age_group": "Thanh niên (≤35)", "income": 54.0, "score": 52.0, "cluster": 3}, {"id": 80, "name": "BonBon MyMy", "gender": "Female", "age": 49, "age_group": "Người cao tuổi (>45)", "income": 54.0, "score": 42.0, "cluster": 0}, {"id": 81, "name": "phuhai", "gender": "Male", "age": 57, "age_group": "Người cao tuổi (>45)", "income": 54.0, "score": 51.0, "cluster": 0}, {"id": 82, "name": "ngochec13", "gender": "Male", "age": 38, "age_group": "Trung niên (36-45)", "income": 54.0, "score": 55.0, "cluster": 3}, {"id": 83, "name": "Văn sỹ", "gender": "Male", "age": 67, "age_group": "Người cao tuổi (>45)", "income": 54.0, "score": 41.0, "cluster": 0}, {"id": 84, "name": "Nam Lu", "gender": "Female", "age": 46, "age_group": "Người cao tuổi (>45)", "income": 54.0, "score": 44.0, "cluster": 0}, {"id": 85, "name": "Phamhungviet1975", "gender": "Female", "age": 21, "age_group": "Thanh niên (≤35)", "income": 54.0, "score": 57.0, "cluster": 3}, {"id": 86, "name": "tedicovn@gmail.com", "gender": "Male", "age": 48, "age_group": "Người cao tuổi (>45)", "income": 54.0, "score": 46.0, "cluster": 0}, {"id": 87, "name": "Lang Tu Mien Tay", "gender": "Female", "age": 55, "age_group": "Người cao tuổi (>45)", "income": 57.0, "score": 58.0, "cluster": 0}, {"id": 88, "name": "Hoàng Mã Vui", "gender": "Female", "age": 22, "age_group": "Thanh niên (≤35)", "income": 57.0, "score": 55.0, "cluster": 3}, {"id": 89, "name": "nguyencongtri", "gender": "Female", "age": 34, "age_group": "Thanh niên (≤35)", "income": 58.0, "score": 60.0, "cluster": 3}, {"id": 90, "name": "khanhthanhanh", "gender": "Female", "age": 50, "age_group": "Người cao tuổi (>45)", "income": 58.0, "score": 46.0, "cluster": 0}, {"id": 91, "name": "Lientan160891", "gender": "Female", "age": 68, "age_group": "Người cao tuổi (>45)", "income": 59.0, "score": 55.0, "cluster": 0}, {"id": 92, "name": "CNwanted .", "gender": "Male", "age": 18, "age_group": "Thanh niên (≤35)", "income": 59.0, "score": 41.0, "cluster": 3}, {"id": 93, "name": "Hồ Việt Văn", "gender": "Male", "age": 48, "age_group": "Người cao tuổi (>45)", "income": 60.0, "score": 49.0, "cluster": 0}, {"id": 94, "name": "neverbackdown6789", "gender": "Female", "age": 40, "age_group": "Trung niên (36-45)", "income": 60.0, "score": 40.0, "cluster": 3}, {"id": 95, "name": "Ngô Minh Thuận", "gender": "Female", "age": 32, "age_group": "Thanh niên (≤35)", "income": 60.0, "score": 42.0, "cluster": 3}, {"id": 96, "name": "Lamthu9286", "gender": "Male", "age": 24, "age_group": "Thanh niên (≤35)", "income": 60.0, "score": 52.0, "cluster": 3}, {"id": 97, "name": "văng782", "gender": "Female", "age": 47, "age_group": "Người cao tuổi (>45)", "income": 60.0, "score": 47.0, "cluster": 0}, {"id": 98, "name": "Nicepet2007", "gender": "Female", "age": 27, "age_group": "Thanh niên (≤35)", "income": 60.0, "score": 50.0, "cluster": 3}, {"id": 99, "name": "limichi9999", "gender": "Male", "age": 48, "age_group": "Người cao tuổi (>45)", "income": 61.0, "score": 42.0, "cluster": 0}, {"id": 100, "name": "Ngo Tung Minh", "gender": "Male", "age": 20, "age_group": "Thanh niên (≤35)", "income": 61.0, "score": 49.0, "cluster": 3}, {"id": 101, "name": "Huutoan7426", "gender": "Female", "age": 23, "age_group": "Thanh niên (≤35)", "income": 62.0, "score": 41.0, "cluster": 3}, {"id": 102, "name": "Sonhaudau", "gender": "Female", "age": 49, "age_group": "Người cao tuổi (>45)", "income": 62.0, "score": 48.0, "cluster": 0}, {"id": 103, "name": "vòng a vĩnh", "gender": "Male", "age": 67, "age_group": "Người cao tuổi (>45)", "income": 62.0, "score": 59.0, "cluster": 0}, {"id": 104, "name": "dinhthitho", "gender": "Male", "age": 26, "age_group": "Thanh niên (≤35)", "income": 62.0, "score": 55.0, "cluster": 3}, {"id": 105, "name": "Kaoru4ever2000", "gender": "Male", "age": 49, "age_group": "Người cao tuổi (>45)", "income": 62.0, "score": 56.0, "cluster": 0}, {"id": 106, "name": "Ngọc Hà Trần", "gender": "Female", "age": 21, "age_group": "Thanh niên (≤35)", "income": 62.0, "score": 42.0, "cluster": 3}, {"id": 107, "name": "Cố Quên Một Người", "gender": "Female", "age": 66, "age_group": "Người cao tuổi (>45)", "income": 63.0, "score": 50.0, "cluster": 0}, {"id": 108, "name": "hahgha", "gender": "Male", "age": 54, "age_group": "Người cao tuổi (>45)", "income": 63.0, "score": 46.0, "cluster": 0}, {"id": 109, "name": "HOANG-MT", "gender": "Male", "age": 68, "age_group": "Người cao tuổi (>45)", "income": 63.0, "score": 43.0, "cluster": 0}, {"id": 110, "name": "datphamshop", "gender": "Male", "age": 66, "age_group": "Người cao tuổi (>45)", "income": 63.0, "score": 48.0, "cluster": 0}, {"id": 111, "name": "nguyễn ngọc hội", "gender": "Male", "age": 65, "age_group": "Người cao tuổi (>45)", "income": 63.0, "score": 52.0, "cluster": 0}, {"id": 112, "name": "dunggiaodich", "gender": "Female", "age": 19, "age_group": "Thanh niên (≤35)", "income": 63.0, "score": 54.0, "cluster": 3}, {"id": 113, "name": "nguyenthanhdat1802", "gender": "Female", "age": 38, "age_group": "Trung niên (36-45)", "income": 64.0, "score": 42.0, "cluster": 3}, {"id": 114, "name": "manhtrung86", "gender": "Male", "age": 19, "age_group": "Thanh niên (≤35)", "income": 64.0, "score": 46.0, "cluster": 3}, {"id": 115, "name": "Triton", "gender": "Female", "age": 18, "age_group": "Thanh niên (≤35)", "income": 65.0, "score": 48.0, "cluster": 3}, {"id": 116, "name": "Thắng Hương", "gender": "Female", "age": 19, "age_group": "Thanh niên (≤35)", "income": 65.0, "score": 50.0, "cluster": 3}, {"id": 117, "name": "zuonghoi", "gender": "Female", "age": 63, "age_group": "Người cao tuổi (>45)", "income": 65.0, "score": 43.0, "cluster": 0}, {"id": 118, "name": "cần một ngôi nhà", "gender": "Female", "age": 49, "age_group": "Người cao tuổi (>45)", "income": 65.0, "score": 59.0, "cluster": 0}, {"id": 119, "name": "gaduaxe", "gender": "Female", "age": 51, "age_group": "Người cao tuổi (>45)", "income": 67.0, "score": 43.0, "cluster": 0}, {"id": 120, "name": "thailanfiditour", "gender": "Female", "age": 50, "age_group": "Người cao tuổi (>45)", "income": 67.0, "score": 57.0, "cluster": 0}, {"id": 121, "name": "Mạnh Phương", "gender": "Male", "age": 27, "age_group": "Thanh niên (≤35)", "income": 67.0, "score": 56.0, "cluster": 3}, {"id": 122, "name": "trần duy khiêm", "gender": "Female", "age": 38, "age_group": "Trung niên (36-45)", "income": 67.0, "score": 40.0, "cluster": 3}, {"id": 123, "name": "Sac Viet ", "gender": "Female", "age": 40, "age_group": "Trung niên (36-45)", "income": 69.0, "score": 58.0, "cluster": 3}, {"id": 124, "name": "dinhdam_87", "gender": "Male", "age": 39, "age_group": "Trung niên (36-45)", "income": 69.0, "score": 91.0, "cluster": 1}, {"id": 125, "name": "hungchu1", "gender": "Female", "age": 23, "age_group": "Thanh niên (≤35)", "income": 70.0, "score": 29.0, "cluster": 3}, {"id": 126, "name": "Nharatngheodq", "gender": "Female", "age": 31, "age_group": "Thanh niên (≤35)", "income": 70.0, "score": 77.0, "cluster": 1}, {"id": 127, "name": "Phuongtd", "gender": "Male", "age": 43, "age_group": "Trung niên (36-45)", "income": 71.0, "score": 35.0, "cluster": 0}, {"id": 128, "name": "Cong Vu", "gender": "Male", "age": 40, "age_group": "Trung niên (36-45)", "income": 71.0, "score": 95.0, "cluster": 1}, {"id": 129, "name": "Minh Huy Ho", "gender": "Male", "age": 59, "age_group": "Người cao tuổi (>45)", "income": 71.0, "score": 11.0, "cluster": 2}, {"id": 130, "name": "ngoquangtrung.haui", "gender": "Male", "age": 38, "age_group": "Trung niên (36-45)", "income": 71.0, "score": 75.0, "cluster": 1}, {"id": 131, "name": "hoanho23.1", "gender": "Male", "age": 47, "age_group": "Người cao tuổi (>45)", "income": 71.0, "score": 9.0, "cluster": 2}, {"id": 132, "name": "tranvuhai2005", "gender": "Male", "age": 39, "age_group": "Trung niên (36-45)", "income": 71.0, "score": 75.0, "cluster": 1}, {"id": 133, "name": "hungtn982 hoang", "gender": "Female", "age": 25, "age_group": "Thanh niên (≤35)", "income": 72.0, "score": 34.0, "cluster": 3}, {"id": 134, "name": "phạm chí dũng", "gender": "Female", "age": 31, "age_group": "Thanh niên (≤35)", "income": 72.0, "score": 71.0, "cluster": 1}, {"id": 135, "name": "lenguyenccts", "gender": "Male", "age": 20, "age_group": "Thanh niên (≤35)", "income": 73.0, "score": 5.0, "cluster": 2}, {"id": 136, "name": "Thiên Nam", "gender": "Female", "age": 29, "age_group": "Thanh niên (≤35)", "income": 73.0, "score": 88.0, "cluster": 1}, {"id": 137, "name": "Tran Duy Khiem", "gender": "Female", "age": 44, "age_group": "Trung niên (36-45)", "income": 73.0, "score": 7.0, "cluster": 2}, {"id": 138, "name": "công vũ", "gender": "Male", "age": 32, "age_group": "Thanh niên (≤35)", "income": 73.0, "score": 73.0, "cluster": 1}, {"id": 139, "name": "lnndgk", "gender": "Male", "age": 19, "age_group": "Thanh niên (≤35)", "income": 74.0, "score": 10.0, "cluster": 2}, {"id": 140, "name": "tyty281207", "gender": "Female", "age": 35, "age_group": "Thanh niên (≤35)", "income": 74.0, "score": 72.0, "cluster": 1}, {"id": 141, "name": "Thạch LD", "gender": "Female", "age": 57, "age_group": "Người cao tuổi (>45)", "income": 75.0, "score": 5.0, "cluster": 2}, {"id": 142, "name": "Bao Vo", "gender": "Male", "age": 32, "age_group": "Thanh niên (≤35)", "income": 75.0, "score": 93.0, "cluster": 1}, {"id": 143, "name": "quyenhotan", "gender": "Female", "age": 28, "age_group": "Thanh niên (≤35)", "income": 76.0, "score": 40.0, "cluster": 3}, {"id": 144, "name": "thuyanh", "gender": "Female", "age": 32, "age_group": "Thanh niên (≤35)", "income": 76.0, "score": 87.0, "cluster": 1}, {"id": 145, "name": "Trần Hùng", "gender": "Male", "age": 25, "age_group": "Thanh niên (≤35)", "income": 77.0, "score": 12.0, "cluster": 2}, {"id": 146, "name": "trần hung", "gender": "Male", "age": 28, "age_group": "Thanh niên (≤35)", "income": 77.0, "score": 97.0, "cluster": 1}, {"id": 147, "name": "nguyendinhsơn", "gender": "Male", "age": 48, "age_group": "Người cao tuổi (>45)", "income": 77.0, "score": 36.0, "cluster": 0}, {"id": 148, "name": "Tran hung", "gender": "Female", "age": 32, "age_group": "Thanh niên (≤35)", "income": 77.0, "score": 74.0, "cluster": 1}, {"id": 149, "name": "dung do thanh", "gender": "Female", "age": 34, "age_group": "Thanh niên (≤35)", "income": 78.0, "score": 22.0, "cluster": 2}, {"id": 150, "name": "Nhovehanoithu", "gender": "Male", "age": 34, "age_group": "Thanh niên (≤35)", "income": 78.0, "score": 90.0, "cluster": 1}, {"id": 151, "name": "banjvancan007", "gender": "Male", "age": 43, "age_group": "Trung niên (36-45)", "income": 78.0, "score": 17.0, "cluster": 2}, {"id": 152, "name": "Mạnh Ninh", "gender": "Male", "age": 39, "age_group": "Trung niên (36-45)", "income": 78.0, "score": 88.0, "cluster": 1}, {"id": 153, "name": "Nhat HD", "gender": "Female", "age": 44, "age_group": "Trung niên (36-45)", "income": 78.0, "score": 20.0, "cluster": 2}, {"id": 154, "name": "lahanqua", "gender": "Female", "age": 38, "age_group": "Trung niên (36-45)", "income": 78.0, "score": 76.0, "cluster": 1}, {"id": 155, "name": "Thư Trương", "gender": "Female", "age": 47, "age_group": "Người cao tuổi (>45)", "income": 78.0, "score": 16.0, "cluster": 2}, {"id": 156, "name": "ngohang62", "gender": "Female", "age": 27, "age_group": "Thanh niên (≤35)", "income": 78.0, "score": 89.0, "cluster": 1}, {"id": 157, "name": "LETHINHULAN.BVBR", "gender": "Male", "age": 37, "age_group": "Trung niên (36-45)", "income": 78.0, "score": 1.0, "cluster": 2}, {"id": 158, "name": "Ths.Kts Phạm Thanh Truyền", "gender": "Female", "age": 30, "age_group": "Thanh niên (≤35)", "income": 78.0, "score": 78.0, "cluster": 1}, {"id": 159, "name": "ngmthang", "gender": "Male", "age": 34, "age_group": "Thanh niên (≤35)", "income": 78.0, "score": 1.0, "cluster": 2}, {"id": 160, "name": "Happy day", "gender": "Female", "age": 30, "age_group": "Thanh niên (≤35)", "income": 78.0, "score": 73.0, "cluster": 1}, {"id": 161, "name": "Minhkhang2015", "gender": "Female", "age": 56, "age_group": "Người cao tuổi (>45)", "income": 79.0, "score": 35.0, "cluster": 0}, {"id": 162, "name": "Mai Nha Hong", "gender": "Female", "age": 29, "age_group": "Thanh niên (≤35)", "income": 79.0, "score": 83.0, "cluster": 1}, {"id": 163, "name": "nguyenbang12", "gender": "Male", "age": 19, "age_group": "Thanh niên (≤35)", "income": 81.0, "score": 5.0, "cluster": 2}, {"id": 164, "name": "Ðịch Tiến Ta Tui", "gender": "Female", "age": 31, "age_group": "Thanh niên (≤35)", "income": 81.0, "score": 93.0, "cluster": 1}, {"id": 165, "name": "Trunghovan861", "gender": "Male", "age": 50, "age_group": "Người cao tuổi (>45)", "income": 85.0, "score": 26.0, "cluster": 2}, {"id": 166, "name": "phanminhnhat", "gender": "Female", "age": 36, "age_group": "Trung niên (36-45)", "income": 85.0, "score": 75.0, "cluster": 1}, {"id": 167, "name": "hinsky.huy", "gender": "Male", "age": 42, "age_group": "Trung niên (36-45)", "income": 86.0, "score": 20.0, "cluster": 2}, {"id": 168, "name": "Linh phan nhat", "gender": "Female", "age": 33, "age_group": "Thanh niên (≤35)", "income": 86.0, "score": 95.0, "cluster": 1}, {"id": 169, "name": "Ly Thai", "gender": "Female", "age": 36, "age_group": "Trung niên (36-45)", "income": 87.0, "score": 27.0, "cluster": 2}, {"id": 170, "name": "toilatoi1", "gender": "Male", "age": 32, "age_group": "Thanh niên (≤35)", "income": 87.0, "score": 63.0, "cluster": 3}, {"id": 171, "name": "xuan quyet vu", "gender": "Male", "age": 40, "age_group": "Trung niên (36-45)", "income": 87.0, "score": 13.0, "cluster": 2}, {"id": 172, "name": "ThuýAnh", "gender": "Male", "age": 28, "age_group": "Thanh niên (≤35)", "income": 87.0, "score": 75.0, "cluster": 1}, {"id": 173, "name": "tranvanhoa10061966", "gender": "Male", "age": 36, "age_group": "Trung niên (36-45)", "income": 87.0, "score": 10.0, "cluster": 2}, {"id": 174, "name": "Trần Hưng", "gender": "Male", "age": 36, "age_group": "Trung niên (36-45)", "income": 87.0, "score": 92.0, "cluster": 1}, {"id": 175, "name": "Thu Truong", "gender": "Female", "age": 52, "age_group": "Người cao tuổi (>45)", "income": 88.0, "score": 13.0, "cluster": 2}, {"id": 176, "name": "Không Biết", "gender": "Female", "age": 30, "age_group": "Thanh niên (≤35)", "income": 88.0, "score": 86.0, "cluster": 1}, {"id": 177, "name": "trân hùng", "gender": "Male", "age": 58, "age_group": "Người cao tuổi (>45)", "income": 88.0, "score": 15.0, "cluster": 2}, {"id": 178, "name": "Mr. EG", "gender": "Male", "age": 27, "age_group": "Thanh niên (≤35)", "income": 88.0, "score": 69.0, "cluster": 1}, {"id": 179, "name": "danviet1946", "gender": "Male", "age": 59, "age_group": "Người cao tuổi (>45)", "income": 93.0, "score": 14.0, "cluster": 2}, {"id": 180, "name": "Vũ huy Đại", "gender": "Male", "age": 35, "age_group": "Thanh niên (≤35)", "income": 93.0, "score": 90.0, "cluster": 1}, {"id": 181, "name": "No Seven", "gender": "Female", "age": 37, "age_group": "Trung niên (36-45)", "income": 97.0, "score": 32.0, "cluster": 2}, {"id": 182, "name": "Ngoc Cuong Duong", "gender": "Female", "age": 32, "age_group": "Thanh niên (≤35)", "income": 97.0, "score": 86.0, "cluster": 1}, {"id": 183, "name": "vanchung.cao", "gender": "Male", "age": 46, "age_group": "Người cao tuổi (>45)", "income": 98.0, "score": 15.0, "cluster": 2}, {"id": 184, "name": "Xe đạp", "gender": "Female", "age": 29, "age_group": "Thanh niên (≤35)", "income": 98.0, "score": 88.0, "cluster": 1}, {"id": 185, "name": "CÔNG SƠN ĐINH", "gender": "Female", "age": 41, "age_group": "Trung niên (36-45)", "income": 99.0, "score": 39.0, "cluster": 3}, {"id": 186, "name": "dqdung57", "gender": "Male", "age": 30, "age_group": "Thanh niên (≤35)", "income": 99.0, "score": 97.0, "cluster": 1}, {"id": 187, "name": "Đức Luân", "gender": "Female", "age": 54, "age_group": "Người cao tuổi (>45)", "income": 101.0, "score": 24.0, "cluster": 2}, {"id": 188, "name": "chauphu902gmail.com", "gender": "Male", "age": 28, "age_group": "Thanh niên (≤35)", "income": 101.0, "score": 68.0, "cluster": 1}, {"id": 189, "name": "XE DAP", "gender": "Female", "age": 41, "age_group": "Trung niên (36-45)", "income": 103.0, "score": 17.0, "cluster": 2}, {"id": 190, "name": "Kmacblad Trungpt", "gender": "Female", "age": 36, "age_group": "Trung niên (36-45)", "income": 103.0, "score": 85.0, "cluster": 1}, {"id": 191, "name": "Bảo Net", "gender": "Female", "age": 34, "age_group": "Thanh niên (≤35)", "income": 103.0, "score": 23.0, "cluster": 2}, {"id": 192, "name": "khfdmnj2367", "gender": "Female", "age": 32, "age_group": "Thanh niên (≤35)", "income": 103.0, "score": 69.0, "cluster": 1}, {"id": 193, "name": "Phan Xuân Tĩnh", "gender": "Male", "age": 33, "age_group": "Thanh niên (≤35)", "income": 113.0, "score": 8.0, "cluster": 2}, {"id": 194, "name": "duytien", "gender": "Female", "age": 38, "age_group": "Trung niên (36-45)", "income": 113.0, "score": 91.0, "cluster": 1}, {"id": 195, "name": "Nguyễn Tin", "gender": "Female", "age": 47, "age_group": "Người cao tuổi (>45)", "income": 120.0, "score": 16.0, "cluster": 2}, {"id": 196, "name": "Cytheria Tran", "gender": "Female", "age": 35, "age_group": "Thanh niên (≤35)", "income": 120.0, "score": 79.0, "cluster": 1}, {"id": 197, "name": "truongbo37", "gender": "Female", "age": 45, "age_group": "Trung niên (36-45)", "income": 126.0, "score": 28.0, "cluster": 2}, {"id": 198, "name": "vohoan2408", "gender": "Male", "age": 32, "age_group": "Thanh niên (≤35)", "income": 126.0, "score": 74.0, "cluster": 1}, {"id": 199, "name": "vinhdq.vn", "gender": "Male", "age": 32, "age_group": "Thanh niên (≤35)", "income": 137.0, "score": 18.0, "cluster": 2}, {"id": 200, "name": "Nha6942", "gender": "Male", "age": 30, "age_group": "Thanh niên (≤35)", "income": 137.0, "score": 83.0, "cluster": 1}];
+        const ageGroups = ["Thanh niên (≤35)", "Trung niên (36-45)", "Người cao tuổi (>45)"];
+
+        let currentFilter = 'all';
+        let searchQuery = '';
+
+        // Khởi tạo Dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            renderPieChart();
+            renderClusterSummaryCards();
+            renderClusterCharts();
+            renderFilterButtons();
+            renderCustomerTable();
+        });
+
+        // 1. Vẽ Pie Chart tỷ lệ khách hàng theo cụm
+        function renderPieChart() {
+            const ctx = document.getElementById('pieChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: pieData.labels,
+                    datasets: [{
+                        data: pieData.counts,
+                        backgroundColor: pieData.colors,
+                        borderColor: '#1E293B',
+                        borderWidth: 3,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#94A3B8',
+                                font: { family: 'Inter', size: 12 },
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const val = context.parsed;
+                                    const pct = ((val / total) * 100).toFixed(1);
+                                    return ` ${context.label}: ${val} KH (${pct}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 2. Render Cards tóm tắt từng cụm
+        function renderClusterSummaryCards() {
+            const container = document.getElementById('clusterSummaryCards');
+            container.innerHTML = clustersData.map(c => `
+                <div class="cluster-summary-card" style="border-left-color: ${c.color};">
+                    <div class="badge" style="background: ${c.color};">${c.name}</div>
+                    <div class="stat-row">
+                        <span class="stat-label">Số lượng KH:</span>
+                        <span class="stat-val">${c.count} (${c.percentage}%)</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Tuổi trung bình:</span>
+                        <span class="stat-val">${c.avg_age} tuổi</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Thu nhập TB:</span>
+                        <span class="stat-val">$${c.avg_income}k</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Chi tiêu TB:</span>
+                        <span class="stat-val">${c.avg_score} /100</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 3. Render 2 biểu đồ cho mỗi cụm: Độ tuổi vs Thu nhập & Độ tuổi vs Điểm chi tiêu
+        function renderClusterCharts() {
+            const container = document.getElementById('clustersDetailContainer');
+            container.innerHTML = clustersData.map(c => `
+                <div class="cluster-detail-block">
+                    <div class="cluster-header">
+                        <div class="cluster-title-group">
+                            <span class="badge" style="background: ${c.color}; font-size: 13px; padding: 6px 12px;">${c.name}</span>
+                            <h3 style="font-size: 16px; font-weight: 700;">Hồ sơ phân bố khách hàng theo Nhóm tuổi</h3>
+                        </div>
+                        <div class="cluster-metrics-inline">
+                            <span>Quy mô: <strong>${c.count} KH (${c.percentage}%)</strong></span>
+                            <span>Tuổi TB: <strong>${c.avg_age}</strong></span>
+                            <span>Thu nhập TB: <strong>$${c.avg_income}k</strong></span>
+                            <span>Chi tiêu TB: <strong>${c.avg_score}</strong></span>
+                        </div>
+                    </div>
+                    <div class="dual-chart-grid">
+                        <!-- Chart 1: Độ tuổi với Thu nhập (Annual Income) -->
+                        <div class="chart-box">
+                            <h4>📊 Độ tuổi với Thu nhập bình quân ($k)</h4>
+                            <div class="chart-wrapper">
+                                <canvas id="chart-income-${c.cluster}"></canvas>
+                            </div>
+                        </div>
+                        <!-- Chart 2: Độ tuổi với Điểm chi tiêu (Spending Score) -->
+                        <div class="chart-box">
+                            <h4>🎯 Độ tuổi với Điểm chi tiêu bình quân (0-100)</h4>
+                            <div class="chart-wrapper">
+                                <canvas id="chart-score-${c.cluster}"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Khởi tạo các chart Chart.js sau khi DOM đã được chèn
+            clustersData.forEach(c => {
+                const labels = c.age_stats.map(s => `${s.group} (${s.count} KH)`);
+                const incomeData = c.age_stats.map(s => s.avg_income);
+                const scoreData = c.age_stats.map(s => s.avg_score);
+
+                // Chart 1: Income
+                new Chart(document.getElementById(`chart-income-${c.cluster}`), {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Thu nhập bình quân ($k)',
+                            data: incomeData,
+                            backgroundColor: c.color_light,
+                            borderColor: c.color,
+                            borderWidth: 2,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: (ctx) => ` Thu nhập TB: $${ctx.parsed.y}k`
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { ticks: { color: '#94A3B8', font: { size: 11 } }, grid: { display: false } },
+                            y: {
+                                ticks: { color: '#94A3B8', callback: (v) => `$${v}k` },
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+
+                // Chart 2: Spending Score
+                new Chart(document.getElementById(`chart-score-${c.cluster}`), {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Điểm chi tiêu bình quân',
+                            data: scoreData,
+                            backgroundColor: c.color_light,
+                            borderColor: c.color,
+                            borderWidth: 2,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: (ctx) => ` Điểm chi tiêu TB: ${ctx.parsed.y} /100`
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { ticks: { color: '#94A3B8', font: { size: 11 } }, grid: { display: false } },
+                            y: {
+                                ticks: { color: '#94A3B8' },
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                beginAtZero: true,
+                                max: 100
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
+        // 4. Render các nút lọc cụm cho bảng
+        function renderFilterButtons() {
+            const group = document.getElementById('filterBtnGroup');
+            const btnsHtml = clustersData.map(c => `
+                <button class="filter-btn" id="btn-cluster-${c.cluster}" onclick="filterCluster(${c.cluster})">
+                    ${c.name} (${c.count})
+                </button>
+            `).join('');
+            group.innerHTML += btnsHtml;
+        }
+
+        function filterCluster(clusterId) {
+            currentFilter = clusterId;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            if (clusterId === 'all') {
+                document.querySelector('.filter-btn').classList.add('active');
+            } else {
+                document.getElementById(`btn-cluster-${clusterId}`).classList.add('active');
+            }
+            renderCustomerTable();
+        }
+
+        function handleSearch() {
+            searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
+            renderCustomerTable();
+        }
+
+        // 5. Render bảng khách hàng
+        function renderCustomerTable() {
+            const tbody = document.getElementById('customerTableBody');
+            let filtered = customersData;
+
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(item => item.cluster === currentFilter);
+            }
+
+            if (searchQuery) {
+                filtered = filtered.filter(item => 
+                    item.name.toLowerCase().includes(searchQuery) ||
+                    item.id.toString().includes(searchQuery) ||
+                    item.gender.toLowerCase().includes(searchQuery) ||
+                    item.age_group.toLowerCase().includes(searchQuery)
+                );
+            }
+
+            document.getElementById('tableCountText').innerText = `Đang hiển thị ${filtered.length} / ${customersData.length} khách hàng`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">Không tìm thấy khách hàng phù hợp.</td></tr>`;
+                return;
+            }
+
+            const clusterColorsMap = {};
+            clustersData.forEach(c => { clusterColorsMap[c.cluster] = c.color; });
+
+            tbody.innerHTML = filtered.map(item => {
+                let tagClass = 'tag-youth';
+                if (item.age_group.includes('Trung niên')) tagClass = 'tag-middle';
+                else if (item.age_group.includes('Người cao tuổi')) tagClass = 'tag-senior';
+
+                const clr = clusterColorsMap[item.cluster] || '#3B82F6';
+
+                return `
+                    <tr>
+                        <td><strong>#${item.id}</strong></td>
+                        <td>${item.name}</td>
+                        <td>${item.gender}</td>
+                        <td>${item.age}</td>
+                        <td><span class="tag-age ${tagClass}">${item.age_group}</span></td>
+                        <td>$${item.income}k</td>
+                        <td>${item.score}</td>
+                        <td><span class="badge" style="background: ${clr}; margin: 0;">Cụm ${item.cluster}</span></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+</html>
